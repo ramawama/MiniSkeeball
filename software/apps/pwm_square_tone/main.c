@@ -20,38 +20,63 @@ nrf_pwm_values_common_t sequence_data[1] = {0};
 
 // Sequence structure for configuring DMA
 nrf_pwm_sequence_t pwm_sequence = {
-  .values.p_common = sequence_data,
-  .length = 1,
-  .repeats = 0,
-  .end_delay = 0,
+    .values.p_common = sequence_data,
+    .length = 1,
+    .repeats = 0,
+    .end_delay = 0,
 };
 
-
-static void pwm_init(void) {
+static void pwm_init(void)
+{
   // Initialize the PWM
   // SPEAKER_OUT is the output pin, mark the others as NRFX_PWM_PIN_NOT_USED
   // Set the clock to 500 kHz, count mode to Up, and load mode to Common
   // The Countertop value doesn't matter for now. We'll set it in play_tone()
-  // TODO
+  nrfx_pwm_config_t config = {
+      .output_pins = {
+          SPEAKER_OUT,
+          NRFX_PWM_PIN_NOT_USED,
+          NRFX_PWM_PIN_NOT_USED,
+          NRFX_PWM_PIN_NOT_USED,
+      },
+      .irq_priority = NRFX_PWM_DEFAULT_CONFIG_IRQ_PRIORITY,
+      .base_clock = NRF_PWM_CLK_500kHz,
+      .count_mode = NRF_PWM_MODE_UP,
+      .top_value = 1000,
+      .load_mode = NRF_PWM_LOAD_COMMON,
+      .step_mode = NRF_PWM_STEP_AUTO,
+  };
+
+  nrfx_pwm_init(&PWM_INST, &config, NULL);
 }
 
-static void play_tone(uint16_t frequency) {
+static void play_tone(uint16_t frequency)
+{
   // Stop the PWM (and wait until its finished)
-  // TODO
+  nrfx_pwm_stop(&PWM_INST, true);
 
   // Set a countertop value based on desired tone frequency
   // You can access it as NRF_PWM0->COUNTERTOP
-  // TODO
+  uint32_t countertop = 500000UL / frequency;
+  if (countertop < 3)
+    countertop = 3; 
+  if (countertop > 0x7FFF)
+    countertop = 0x7FFF; // countertop is 15-bit
 
+  NRF_PWM0->COUNTERTOP = countertop;
   // Modify the sequence data to be a 25% duty cycle
   // TODO
+  sequence_data[0] = (nrf_pwm_values_common_t)(countertop / 4);
 
   // Start playback of the samples and loop indefinitely
   // TODO
+  (void)nrfx_pwm_simple_playback(&PWM_INST, &pwm_sequence,
+                                 1,
+                                 NRFX_PWM_FLAG_LOOP);
 }
 
-
-int main(void) {
+int main(void)
+{
   printf("Board started!\n");
 
   // initialize PWM
@@ -59,8 +84,9 @@ int main(void) {
 
   // Play the A4 tone for one second
   // TODO
-
-  // Play the C#5 tone for one second
+play_tone(659); nrf_delay_ms(100);
+play_tone(784); nrf_delay_ms(100);
+play_tone(988); nrf_delay_ms(150);
   // TODO
 
   // Play the E5 tone for one second
@@ -68,8 +94,12 @@ int main(void) {
 
   // Play the A5 tone for one second
   // TODO
+  nrfx_pwm_stop(&PWM_INST, true);
 
   // Stop all noises
+  while (1)
+  {
+    nrf_delay_ms(1000);
+  }
   // TODO
 }
-

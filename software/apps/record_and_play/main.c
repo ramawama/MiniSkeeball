@@ -150,6 +150,22 @@ static void pwm_init(void) {
   // Set the clock to 16 MHz
   // Set a countertop value based on sampling frequency and repetitions
   // TODO
+  uint32_t countertop = 16000000 / (SAMPLING_FREQUENCY * 2); // same as before
+  nrfx_pwm_config_t pwm_config = {
+    .output_pins = {
+      SPEAKER_OUT, // channel 0
+      NRFX_PWM_PIN_NOT_USED, // channel 1
+      NRFX_PWM_PIN_NOT_USED, // channel 2
+      NRFX_PWM_PIN_NOT_USED, // channel 3
+    },
+    .irq_priority = NRFX_PWM_DEFAULT_CONFIG_IRQ_PRIORITY, 
+    .base_clock = NRF_PWM_CLK_16MHz,
+    .count_mode = NRF_PWM_MODE_UP,
+    .top_value = countertop,
+    .load_mode = NRF_PWM_LOAD_COMMON,
+    .step_mode = NRF_PWM_STEP_AUTO
+  };
+  nrfx_pwm_init(&PWM_INST, &pwm_config, NULL);
 }
 
 static void play_audio_samples_looped(void) {
@@ -158,17 +174,31 @@ static void play_audio_samples_looped(void) {
   // Samples should range from 0 to COUNTERTOP
   // Each sample should be rescaled in place
   // TODO
+  uint32_t countertop = 16000000 / (SAMPLING_FREQUENCY * 2); // same as before
+  for (int i=0; i<BUFFER_SIZE; i++) {
+    // modfiy samples in place to be duty cycle based on countertop
+    samples[i] = ((uint32_t)samples[i] * countertop) / ADC_MAX_COUNTS;
+  }
+
+
 
   // Create the pwm sequence (nrf_pwm_sequence_t) using the samples
   // Do not make another buffer for this. You can reuse the sample buffer
   // You should set a non-zero repeat value (this is how many times each _sample_ repeats)
   // TODO
+  nrf_pwm_sequence_t seq = {
+    .values.p_common = samples,
+    .length = BUFFER_SIZE,
+    .repeats = 1,
+    .end_delay = 0
+  };
 
   // Start playback of the samples and loop indefinitely
   // You will need to pass in a flag to loop the sound
   // The playback count here is the number of times the entire buffer will repeat
   //    (which doesn't matter if you set the loop flag)
   // TODO
+  nrfx_pwm_simple_playback(&PWM_INST, &seq, 1, NRFX_PWM_FLAG_LOOP);
 }
 
 
@@ -203,3 +233,9 @@ int main(void) {
   }
 }
 
+// if 500 kHz PWM clock was used
+// countertop = 500000 / (16000 * 2) = 15.625 ~ 16
+// instead of 500 countertop
+// we would only have 16 duty cycles to work with, 
+// there isnt enough resolution for audio playback, 
+// limited sound quality
