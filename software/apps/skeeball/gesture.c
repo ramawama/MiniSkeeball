@@ -130,21 +130,16 @@ static gesture_t decode_gesture(uint8_t count) {
 // ---- Public API ----
 
 void gesture_init(void) {
-    // set up I2C on QWIIC bus
-    nrfx_twim_config_t twim_cfg = NRFX_TWIM_DEFAULT_CONFIG;
-    twim_cfg.scl = I2C_QWIIC_SCL; // same as EDGE_P19
-    twim_cfg.sda = I2C_QWIIC_SDA; // same as EDGE_P20
-    nrfx_twim_init(&twim, &twim_cfg, NULL, NULL);
-    nrfx_twim_enable(&twim);
-
     sensor_init();
-
     printf("gesture_init done\n");
+}
+
+uint8_t gesture_proximity(void) {
+    return read_reg(REG_PDATA);
 }
 
 gesture_t gesture_get(void) {
     // poll GSTATUS directly — no INT pin needed
-
 
     if (!(read_reg(REG_GSTATUS) & GSTATUS_GVALID)) {
         return GESTURE_NONE;
@@ -171,7 +166,7 @@ gesture_t gesture_get(void) {
 
     gesture_t result = decode_gesture(count);
 
-    // wait for gesture engine to go idle so stale data doesn't bleed into the next read
+    // wait for gesture engine to go idle
     // timeout after 1s in case hand stays in range
     uint32_t timeout = 1000;
     while ((read_reg(REG_GSTATUS) & GSTATUS_GVALID) && timeout > 0) {

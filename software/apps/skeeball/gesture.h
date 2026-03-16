@@ -19,6 +19,7 @@
 #define REG_GCONF3    0xAA   // gesture dim select
 #define REG_GCONF4    0xAB   // gesture mode (0)/ interrupt (1)
 #define REG_GFLVL     0xAE   // FIFO lvl (# datasets in buffer)
+#define REG_PDATA     0x9C   // proximity data (0-255)
 #define REG_GSTATUS   0xAF   // gesture status flags (1: GVALID, 0: GFIFO_U/D/L/R)
 #define REG_GFIFO_U   0xFC   // burst-read entry for FIFO (Up xFC/Down xFD/Left xFE/Right xFF) 
 
@@ -31,9 +32,8 @@
 #define GSTATUS_GVALID  (1 << 0)
 
 // GCONF4 bits
-#define GCONF4_GMODE     (1 << 0) // gesture mode
-#define GCONF4_GIEN      (1 << 1) // gesture interrupt enable
-#define TEMP_GCONF4_GFIFO_CLR (1 << 2) // clear
+#define GCONF4_GMODE          (1 << 0) // gesture mode
+#define TEMP_GCONF4_GFIFO_CLR (1 << 2) // clear FIFO
 
 // Maximum datasets the hardware FIFO can hold
 #define FIFO_MAX  32
@@ -52,3 +52,6 @@ void gesture_init(void);
 
 // get current gesture.  Returns GESTURE_NONE if nothing new.
 gesture_t gesture_get(void);
+
+// returns raw proximity 0-255 (255 = hand right on sensor). Use > 180 to select.
+uint8_t gesture_proximity(void);
